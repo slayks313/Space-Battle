@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+       body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #000;
+        }
+        #menu, #gameOver {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            flex-direction: column;
+            background-image: url('1674812444_bogatyr-club-p-chernii-kosmos-fon-instagram-3.png');
+            background-size: cover;
+            background-position: center;
+        }
+        #gameOver {
+            display: none;
+        }
+        #game {
+            display: none;
+            position: relative;
+            height: 100vh;
+            background-color: black;
+            background-image: url('1674812444_bogatyr-club-p-chernii-kosmos-fon-instagram-3.png');
+            background-size: cover;
+            background-position: center;
+        }
+        #ship {
+            width: 100px; /* Ширина изображения корабля */
+            height: 100px; /* Высота изображения корабля */
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+          
+            background-image: url('1693372048_grizly-club-p-kartinki-kosmicheskii-korabl-2d-bez-fona-31.png'); /* Замените на путь к изображению корабля игрока */
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .enemy {
+            width: 100px; /* Ширина изображения врага */
+            height: 100px; /* Высота изображения врага */
+            position: absolute;
+            background-image: url('png-klev-club-mkzm-p-kosmicheskii-korabl-pikselnii-png-21.png'); /* Замените на путь к изображению врага */
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        .bullet {
+            width: 5px;
+            height: 20px;
+            background-color: yellow;
+            position: absolute;
+        }
+        .enemy-bullet {
+            width: 5px;
+            height: 20px;
+            background-color: green;
+            position: absolute;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+        }
+        .control-btn {
+            background-color: transparent;
+            border: none;
+            width: 60px;
+            height: 60px;
+            color: white;
+            font-size: 36px;
+        }
+        #lives {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+        }
+        #difficulty {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 24px;
+        }
+        #menu button {
+            margin: 10px 0;
+            padding: 20px 40px;
+            font-size: 24px;
+        }
+        #difficultyButton {
+            margin-top: 10px;
+            padding: 15px 30px;
+            font-size: 20px;
+        }
+        #restartButton{
+            margin: 10px 0;
+            padding: 20px 40px;
+            font-size: 24px;
+        }
+        #menuButton{
+            margin: 10px 0;
+            padding: 20px 40px;
+            font-size: 24px; 
+        }
+        #gameOver>h1{
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div id="menu">
+    <button id="playButton">Играть</button>
+    <button id="difficultyButton">Сложность: 1</button>
+</div>
+
+<div id="game">
+    <div id="lives">Жизни: 3</div>
+    <div id="difficulty">Сложность: 1</div>
+    <div id="ship"></div>
+    <div id="controls">
+        <button id="leftBtn" class="control-btn"><i class="bi bi-arrow-left-circle-fill"></i></button>
+        <button id="shootBtn" class="control-btn"><i class="bi bi-bullseye"></i></button>
+        <button id="rightBtn" class="control-btn"><i class="bi bi-arrow-right-circle-fill"></i></button>
+    </div>
+</div>
+
+<div id="gameOver">
+    <h1>Вы проиграли!</h1>
+    <button id="restartButton">Начать заново</button>
+    <button id="menuButton">Главное меню</button>
+</div>
+
+<script>
+    // Элементы
+    const playButton = document.getElementById('playButton');
+    const game = document.getElementById('game');
+    const ship = document.getElementById('ship');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const shootBtn = document.getElementById('shootBtn');
+    const gameOverScreen = document.getElementById('gameOver');
+    const restartButton = document.getElementById('restartButton');
+    const menuButton = document.getElementById('menuButton');
+    const livesDisplay = document.getElementById('lives');
+    const difficultyDisplay = document.getElementById('difficulty');
+    const difficultyButton = document.getElementById('difficultyButton');
+
+    let shipSpeed = 5;
+    let shipX = window.innerWidth / 2 - 25;
+    let gameInterval;
+    let enemies = [];
+    let bullets = [];
+    let enemyBullets = [];
+    let lives = 3;
+    let difficulty = 1;
+    let leftPressed = false;
+    let rightPressed = false;
+
+    // Добавьте звук стрельбы корабля игрока
+    const playerShootSound = new Audio('laser-gun-81720\ \(1\)\(3\).mp3'); // Замените на путь к вашему звуку
+    const enemyShootSound = new Audio('laser-gun-81720\ \(1\)\(3\).mp3'); // Замените на путь к вашему звуку
+
+    // Обновление уровня сложности
+    difficultyButton.addEventListener('click', () => {
+        difficulty = (difficulty % 3) + 1;
+        difficultyButton.innerText = `Сложность: ${difficulty}`;
+        difficultyDisplay.innerText = `Сложность: ${difficulty}`;
+    });
+
+    // Запуск игры
+    playButton.addEventListener('click', () => {
+        document.getElementById('menu').style.display = 'none';
+        game.style.display = 'block';
+        startGame();
+    });
+
+    function startGame() {
+        gameInterval = setInterval(() => {
+            moveEnemies();
+            moveBullets();
+            moveShip();
+            moveEnemyBullets();
+            checkCollisions();
+            if (lives <= 0) {
+                endGame();
+            }
+        }, 50);
+        spawnEnemy();
+    }
+
+    function spawnEnemy() {
+        const enemy = document.createElement('div');
+        enemy.classList.add('enemy');
+        enemy.style.top = '0px';
+        enemy.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+        game.appendChild(enemy);
+        enemies.push(enemy);
+
+        // На 3-м уровне сложности некоторые корабли стреляют
+        if (difficulty === 3 && Math.random() < 0.5) {
+            setTimeout(() => {
+                shootEnemyBullet(enemy);
+            }, 1000);
+        }
+
+        const spawnRate = difficulty === 1 ? 2000 : difficulty === 2 ? 1500 : 1000;
+        setTimeout(spawnEnemy, spawnRate); // Зависит от уровня сложности
+    }
+
+    function moveEnemies() {
+        const enemySpeed = difficulty === 1 ? 2 : difficulty === 2 ? 4 : 6;
+        enemies.forEach((enemy, index) => {
+            enemy.style.top = (parseInt(enemy.style.top) + enemySpeed) + 'px';
+            if (parseInt(enemy.style.top) > window.innerHeight) {
+                game.removeChild(enemy);
+                enemies.splice(index, 1);
+                loseLife();
+            }
+        });
+    }
+
+    function moveBullets() {
+        bullets.forEach((bullet, index) => {
+            bullet.style.top = (parseInt(bullet.style.top) - 10) + 'px';
+            if (parseInt(bullet.style.top) < 0) {
+                game.removeChild(bullet);
+                bullets.splice(index, 1);
+            }
+        });
+    }
+
+    function shoot() {
+        const bullet = document.createElement('div');
+        bullet.classList.add('bullet');
+        bullet.style.left = (shipX + 22.5) + 'px'; // Центр корабля
+        bullet.style.top = (window.innerHeight - 70) + 'px';
+        game.appendChild(bullet);
+        bullets.push(bullet);
+        playerShootSound.play(); // Воспроизведение звука стрельбы игрока
+    }
+
+    function checkCollisions() {
+        bullets.forEach((bullet, bulletIndex) => {
+            enemies.forEach((enemy, enemyIndex) => {
+                if (isColliding(bullet, enemy)) {
+                    game.removeChild(bullet);
+                    bullets.splice(bulletIndex, 1);
+                    game.removeChild(enemy);
+                    enemies.splice(enemyIndex, 1);
+                }
+            });
+        });
+
+        enemyBullets.forEach((enemyBullet, bulletIndex) => {
+            if (isColliding(enemyBullet, ship)) {
+                game.removeChild(enemyBullet);
+                enemyBullets.splice(bulletIndex, 1);
+                loseLife();
+            }
+        });
+    }
+
+    function isColliding(bullet, enemy) {
+        const rect1 = bullet.getBoundingClientRect();
+        const rect2 = enemy.getBoundingClientRect();
+        return !(rect1.right < rect2.left || 
+                 rect1.left > rect2.right || 
+                 rect1.bottom < rect2.top || 
+                 rect1.top > rect2.bottom);
+    }
+
+    function loseLife() {
+        lives--;
+        livesDisplay.innerText = `Жизни: ${lives}`;
+    }
+
+    function shootEnemyBullet(enemy) {
+        const bullet = document.createElement('div');
+        bullet.classList.add('enemy-bullet');
+        bullet.style.left = (parseInt(enemy.style.left) + 22.5) + 'px'; // Центр врага
+        bullet.style.top = (parseInt(enemy.style.top) + 50) + 'px';
+        game.appendChild(bullet);
+        enemyBullets.push(bullet);
+        enemyShootSound.play(); // Воспроизведение звука
+    }
+
+    function moveEnemyBullets() {
+        enemyBullets.forEach((bullet, index) => {
+            bullet.style.top = (parseInt(bullet.style.top) + 8) + 'px'; // Увеличиваем скорость
+            if (parseInt(bullet.style.top) > window.innerHeight) {
+                game.removeChild(bullet);
+                enemyBullets.splice(index, 1);
+            }
+        });
+    }
+
+    function moveShip() {
+        if (leftPressed && shipX > 0) {
+            shipX -= shipSpeed;
+        }
+        if (rightPressed && shipX < window.innerWidth - 50) {
+            shipX += shipSpeed;
+        }
+        ship.style.left = shipX + 'px';
+    }
+
+    // Управление с удержанием кнопок
+    leftBtn.addEventListener('mousedown', () => { leftPressed = true; });
+    rightBtn.addEventListener('mousedown', () => { rightPressed = true; });
+    leftBtn.addEventListener('mouseup', () => { leftPressed = false; });
+    rightBtn.addEventListener('mouseup', () => { rightPressed = false; });
+
+    // Добавляем поддержку тач-событий
+    leftBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Предотвращаем прокрутку
+        leftPressed = true;
+    });
+    rightBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Предотвращаем прокрутку
+        rightPressed = true;
+    });
+    leftBtn.addEventListener('touchend', () => { leftPressed = false; });
+    rightBtn.addEventListener('touchend', () => { rightPressed = false; });
+
+    shootBtn.addEventListener('click', shoot);
+
+    function endGame() {
+        clearInterval(gameInterval);
+        game.style.display = 'none';
+        gameOverScreen.style.display = 'flex';
+    }
+
+    restartButton.addEventListener('click', () => {
+        location.reload();
+    });
+
+    menuButton.addEventListener('click', () => {
+        location.reload();
+    });
+</script>
+
+</body>
+</html>
